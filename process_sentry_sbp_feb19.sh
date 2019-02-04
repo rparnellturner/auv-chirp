@@ -77,13 +77,13 @@ getnav=0
 # 3. divide CHIRP data into individual lines
 getsufiles=0
 # 4. plot a basemap showing multibeam bathymetry and processed CHIRP lines
-plotbasemap=0
+plotbasemap=1
 # 5. make GMT-friendly NetCDF grid files for plotting
 makegrid=0
 # 6. plot individual profiles
-plotgrid=1
-# show gridded CHIRP profiles as they are plotted; 1 = on, 0 = off (will fill screen with plots if switched on)
-showplots=1
+plotgrid=0
+# 7. show gridded CHIRP profiles as they are plotted; 1 = on, 0 = off (will fill screen with plots if switched on)
+showplots=0
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -353,10 +353,11 @@ EOF
 	awk '{print $4, $5}' linestartsends | psxy   -Sc.1 -Gred -W.3,black $rgn $proj -K -O >> $outfile.ps
 	awk ' {print $3, $2 }' sentry$dive\_all_jday_traces_injector_join.xy | psxy  -W.5,black  $rgn $proj -K  -O >> $outfile.ps
 
-	numlines=`wc -l sentry$dive\_turns.xy | awk '{print $1}'`
+	numlines=`wc -l sentry$dive\_turns.xy | awk '{print $1-1}'`
 	for line in `seq 1 1 $numlines` ; do
 		cdp1=`awk '$1==line {print $2}' line=$line linestartsends`
 		cdp2=`awk '$1==line {print $3}' line=$line linestartsends`
+		
 		awk ' $1>cdp1 && $1<=cdp2 {print $3, $2, $1}' cdp1=$cdp1 cdp2=$cdp2 sentry$dive\_all_jday_traces_injector_join.xy |\
 		awk '!($3 in a) {a[$3];print}' | sample1d -T2 -I1 | awk 'NR%500==0 {print $0}' | psxy -Sc.05 -Gblack -W.3,black $rgn $proj -O -K >> $outfile.ps
 	done
@@ -365,7 +366,7 @@ EOF
 
 
 
-pslegend $proj $rgn  -Dx5.5/-.4/1.0i/0.075i/BL -L1.1 -O  -K   << EOF >> $outfile.ps
+pslegend $proj $rgn  -Dx5.5/-.4/1.0i/0.075i/BL   -O  -K   << EOF >> $outfile.ps
 M -104 9.8 0.5+l+ar f 
 EOF
 
