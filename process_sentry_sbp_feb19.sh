@@ -21,8 +21,6 @@
 # - STATIC CORRECTION ROUTINE
 # - INTERPRETATION IMPORT
 
-
-
 ##############################################################################
 
 # SET SOME GMT DEFAULTS
@@ -35,13 +33,13 @@ gmtset PS_PAGE_ORIENTATION portrait  FONT_ANNOT_PRIMARY 8  FONT_ANNOT_SECONDARY 
 #  ENTER VARIABLES HERE
 
 # Sentry dive number
-dive=521
+dive=520
 
 # directory containing jsf files
-jsf_dir=nav
+jsf_dir=proc
 
 # location of underlay bathymetry grid (do not include *.grd ending)
-grid=../products/multibeam/sentry521_20181208_1245_rnv_tide_1.00x1.00_BV07_thresholded
+grid=../multibeam/sentry520_20181207_1243_rnv_tide_1.00x1.00_BV04_thresholded
 
 # set start and end times for SBP plot in seconds  TWTT relative to vehicle
 t1=0.07
@@ -77,13 +75,13 @@ getnav=0
 # 3. divide CHIRP data into individual lines
 getsufiles=0
 # 4. plot a basemap showing multibeam bathymetry and processed CHIRP lines
-plotbasemap=1
+plotbasemap=0
 # 5. make GMT-friendly NetCDF grid files for plotting
-makegrid=0
+makegrid=1
 # 6. plot individual profiles
-plotgrid=0
+plotgrid=1
 # 7. show gridded CHIRP profiles as they are plotted; 1 = on, 0 = off (will fill screen with plots if switched on)
-showplots=0
+showplots=1
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -92,8 +90,8 @@ showplots=0
 proj=-JM$plotwidth
 rgn=`grdinfo -I- $grid.grd`
 
-jsf_start=`ls -1 nav/*.jsf | sed 's/[^0-9]*//g' | head -1`
-jsf_end=`ls -1 nav/*.jsf | sed 's/[^0-9]*//g' | tail -1`
+jsf_start=`ls -1 $jsf_dir\/*.jsf | sed 's/[^0-9]*//g' | head -1`
+jsf_end=`ls -1 $jsf_dir\/*.jsf | sed 's/[^0-9]*//g' | tail -1`
 
 # make some directories
 
@@ -113,11 +111,11 @@ echo Sentry $dive $divedate
 
 if [ $extractjsf -eq 1 ] ; then
 
-echo "converting navigated jsf files to segy and SU format"
+	echo "converting navigated jsf files to segy and SU format"
 
-# make list of jsf files to be processed, count them up
-ls -1  $jsf_dir\/*.jsf > jsflist
-numjsf=`wc -l jsflist | awk '{print $1}'`
+	# make list of jsf files to be processed, count them up
+	ls -1  $jsf_dir\/*.jsf > jsflist
+	numjsf=`wc -l jsflist | awk '{print $1}'`
  
  	echo "extracting $numjsf jsf files, Sentry $dive"
  
@@ -133,13 +131,10 @@ numjsf=`wc -l jsflist | awk '{print $1}'`
 	done
 
 	# CREATE SU FILES FROM SEGY FILES FOR PROCESSING IN SU
-echo $jsf_dir
+	echo $jsf_dir
 	for file in `seq 1 1 $numjsf `; do
-	filename=`awk 'NR==file {print $1 }' file=$file jsflist `
-	shortfilename=`awk 'NR==file {print $1 }' file=$file jsflist | sed "s/$jsf_dir\\///g" `
-	
-# 	echo $filename
-	echo $shortfilename
+		filename=`awk 'NR==file {print $1 }' file=$file jsflist `
+		shortfilename=`awk 'NR==file {print $1 }' file=$file jsflist | sed "s/$jsf_dir\\///g" `
 		segyread tape=$filename\.segy endian=0 verbose=1 | \
 		segyclean > su_files/sentry$dive\-$shortfilename\.su
 		done		
@@ -147,7 +142,6 @@ echo $jsf_dir
 	# MAKE SINGLE SU FILE FOR ALL LINES
 
 	cat su_files/sentry$dive-*.su > su_files/sentry$dive\_all.su
-	
 		
 	# get day, hour, minute, second, cdp, x, y from su header (note xy units are arc seconds*100, not accurate enough...)
 
@@ -161,7 +155,7 @@ fi
 
 if [ $getnav -eq 1 ] ; then
 
-echo "getting navigation info"
+	echo "getting navigation info"
 
 	# find julian day of dive from date 
 
@@ -231,20 +225,20 @@ echo "getting navigation info"
 		echo $line $startlon $startlat >> temp
 		echo $line $finlon $finlat >> temp
 
-# calculate length of each line in meters
+		# calculate length of each line in meters
 
 		length=`awk '$1==line {print $2, $3, $1}' line=$line temp | mapproject -Ge- | awk 'NR%2==0 {printf "%i", $4} '`
 
 		echo $line $startcdp $fincdp $startlon $startlat $finlon $finlat $length >> linestartsends
 		echo line $line cdp_start $startcdp cdp_end $fincdp
 	
-		done
+	done
 		
-		psscale -D1.5/-.8/3/.15h -Ba90g900f30/:"COG":   -Chdg.cpt -O  -K   >> sentry$dive\_checklinegeom.ps
+	psscale -D1.5/-.8/3/.15h -Ba90g900f30/:"COG":   -Chdg.cpt -O  -K   >> sentry$dive\_checklinegeom.ps
 
 	psbasemap $rgn $proj -B0 -O -K >> sentry$dive\_checklinegeom.ps
 	
-gmt pstext -JX$plotwidth -R0/10/0/10 -Gwhite   -F+jLB+f10,0,black   -N    -K   -O << EOF >> sentry$dive\_checklinegeom.ps
+	 pstext -JX$plotwidth -R0/10/0/10 -Gwhite   -F+jLB+f10,0,black   -N    -K   -O << EOF >> sentry$dive\_checklinegeom.ps
 .1 .1 Sentry $dive
 EOF
 
@@ -252,24 +246,24 @@ EOF
 
 
 
-# plot heading vs CDP
+	# plot heading vs CDP
 
-cdpmin=`awk '{print $2-2000} ' linestartsends | head -1`
-cdpmax=`awk '{print $3+2000} ' linestartsends | tail -1`
+	cdpmin=`awk '{print $2-2000} ' linestartsends | head -1`
+	cdpmax=`awk '{print $3+2000} ' linestartsends | tail -1`
 
-offset=`echo $plotwidth | awk '{print $1+2}'`
-awk '{print $1, $4, $4}' sentry$dive\_heading.xy   | psxy -Sc.03 -Chdg.cpt  -R$cdpmin\/$cdpmax\/-5/180 -JX$plotwidth\/5  -Bxa10000f5000+lCDP  -Bya30f15+lCOG    -BSEn -O  -K  -X$offset >> sentry$dive\_checklinegeom.ps	
+	offset=`echo $plotwidth | awk '{print $1+2}'`
+	awk '{print $1, $4, $4}' sentry$dive\_heading.xy   | psxy -Sc.03 -Chdg.cpt  -R$cdpmin\/$cdpmax\/-5/180 -JX$plotwidth\/5  -Bxa10000f5000+lCDP  -Bya30f15+lCOG    -BSEn -O  -K  -X$offset >> sentry$dive\_checklinegeom.ps	
 
 	# plot turning points = line joins 
-		awk '{print $3, $5}' sentry$dive\_turns.xy | psxy -Sc.3 -W1,black  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5   -O  -K  >> sentry$dive\_checklinegeom.ps	
+	awk '{print $3, $5}' sentry$dive\_turns.xy | psxy -Sc.3 -W1,black  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5   -O  -K  >> sentry$dive\_checklinegeom.ps	
 	awk '{print $3, $5, NR}' sentry$dive\_turns.xy |  gmt pstext -F+jLB+a30+f8,0,black -G255 -TO -D.1/.1+v.5,gray  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5 -K -O -N >>  sentry$dive\_checklinegeom.ps
 
-# plot dcog cutoff value
+	# plot dcog cutoff value
 
-echo $cdpmin $dcog > temp
-echo $cdpmax $dcog >> temp
+	echo $cdpmin $dcog > temp
+	echo $cdpmax $dcog >> temp
 
-gmt psxy -W.5,black,-  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5    -K  -O  << EOF >> sentry$dive\_checklinegeom.ps
+	gmt psxy -W.5,black,-  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5    -K  -O  << EOF >> sentry$dive\_checklinegeom.ps
 $cdpmin $dcog
 $cdpmax $dcog
 >
@@ -277,8 +271,8 @@ $cdpmin -$dcog
 $cdpmax -$dcog
 EOF
  	
-# first deriv of heading
-awk '{print $1, $7}' sentry$dive\_heading.xy | filter1d -FP100 | psxy -Sc.03 -Gblack  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5  -Bxa10000f5000+lCDP  -Bya.5f.1+ldCOG -BSWn -O    >> sentry$dive\_checklinegeom.ps	
+	# first deriv of heading
+	awk '{print $1, $7}' sentry$dive\_heading.xy | filter1d -FP100 | psxy -Sc.03 -Gblack  -R$cdpmin\/$cdpmax\/-1.5/1.5 -JX$plotwidth\/5  -Bxa10000f5000+lCDP  -Bya.5f.1+ldCOG -BSWn -O    >> sentry$dive\_checklinegeom.ps	
 
 
 	psconvert -A -Tg -Qt -Qg sentry$dive\_checklinegeom.ps
@@ -294,31 +288,29 @@ fi
 
 if [ $getsufiles -eq 1 ] ; then
 
-echo "dividing CHRIP data into individual lines"
+	echo "dividing CHRIP data into individual lines"
 
 	numlines=`wc -l sentry$dive\_turns.xy | awk '{print $1-1}'`
 
 	for line in `seq 1 1 $numlines` ; do
 		 echo line $line started 
 
-
 		cdp1=`awk '$1==line {print $2}' line=$line linestartsends `
 		cdp2=`awk '$1==line {print $3}' line=$line linestartsends `
 
 		cdpnum=`echo $cdp2 $cdp1 | awk '{print ($1-$2)+1}' `
 		
-# 		select cdps for individual line; apply time window; apply gain function; balance traces; clip outliers; apply filter; fix headers
+		# select cdps for individual line; apply time window; apply gain function; balance traces; clip outliers; apply filter; fix headers
 
-			cat su_files/sentry$dive\_all.su |\
-			suwind tmin=$t1 tmax=$t2 key=tracl min=$cdp1 max=$cdp2 |\
-			sugain tpow=1 qbal=1 qclip=.99  | \
-			sufilter f=200,250,50000,80000  | \
-			sushw key=tracr a=1 c=.016 j=1   | \
-			sushw key=cdp a=1 c=.016 j=1     | \
-			sushw key=tracl a=1 c=.016 j=1   | \
-			sushw key=fldr a=1 c=.016 j=1   > su_files/sentry$dive\_line$line\_filt.su
-			
-			 echo line $line complete 
+		cat su_files/sentry$dive\_all.su |\
+		suwind tmin=$t1 tmax=$t2 key=tracl min=$cdp1 max=$cdp2 |\
+		sugain tpow=1 qbal=1 qclip=.99  | \
+		sufilter f=200,250,50000,80000  | \
+		sushw key=tracr a=1 c=.016 j=1   | \
+		sushw key=cdp a=1 c=.016 j=1     | \
+		sushw key=tracl a=1 c=.016 j=1   | \
+		sushw key=fldr a=1 c=.016 j=1   > su_files/sentry$dive\_line$line\_filt.su
+		echo line $line complete 
 
  	done
 fi
@@ -327,22 +319,20 @@ fi
 
 if [ $plotbasemap -eq 1 ] ; then
 
-echo "plotting basemap showing multibeam bathymetry and processed CHIRP lines"
+	echo "plotting basemap showing multibeam bathymetry and processed CHIRP lines"
 
 
-outfile=sentry$dive\_basemap
+	outfile=sentry$dive\_basemap
 
-	if [ ! -f  $grid.slope.grd ] ; then
-		grdgradient $grid.grd -fg -D -S$grid.temp.grd -Gjunk.grd
-		# CONVERT TO DEGREES, WRITE OUT XYZ FILES
-		grdmath $grid.temp.grd ATAN PI DIV 180 MUL -0.01 MUL = $grid.slope.grd
-		rm -f $grid.temp.grd
-	fi	 
-
+	# CALCUATE A SLOPE GRID FOR ILLUMINATION
+	grdgradient $grid.grd -fg -D -S$grid.temp.grd -Gjunk.grd
+	# CONVERT TO DEGREES, WRITE OUT XYZ FILES
+	grdmath $grid.temp.grd ATAN PI DIV 180 MUL -0.01 MUL = $grid.slope.grd
+	rm -f $grid.temp.grd
 
 	psbasemap  $bval $rgn $proj -K -X2 -Y2 > $outfile.ps
 
-grd2cpt $grid.grd -Chaxby  -E > $grid.cpt
+	grd2cpt $grid.grd -Chaxby  -E > $grid.cpt
 
 	grdimage $grid.grd -I$grid.slope.grd -C$grid.cpt $bval $rgn $proj -K -O -Q >> $outfile.ps
 
@@ -366,7 +356,7 @@ EOF
 
 
 
-pslegend $proj $rgn  -Dx5.5/-.4/1.0i/0.075i/BL   -O  -K   << EOF >> $outfile.ps
+	pslegend $proj $rgn  -Dx5.5/-.4/1.0i/0.075i/BL   -O  -K   << EOF >> $outfile.ps
 M -104 9.8 0.5+l+ar f 
 EOF
 
@@ -381,16 +371,14 @@ fi
 
 if [ $makegrid -eq 1 ] ; then
 
-echo "making GMT-friendly NetCDF grid files for plotting"
+	echo "making GMT-friendly NetCDF grid files for plotting"
 
 	numlines=`wc -l sentry$dive\_turns.xy | awk '{print $1-1}'`
 	for line in `seq 1 1 $numlines `; do
 		cdpnum=`awk '$1==line {print ($3-$2)+1} ' line=$line linestartsends`
-echo $cdpnum
 		# make netCDF grid 
 		cat su_files/sentry$dive\_line$line\_filt.su | suvlength ns=60000  | sustrip | b2a n1=1 |\
-		 xyz2grd -ZLBa -R1/$cdpnum\/1/60000 -I1/1 -Gsu_files/sentry$dive\_line$line\_filt.grd
-
+		xyz2grd -ZLBa -R1/$cdpnum\/1/60000 -I1/1 -Gsu_files/sentry$dive\_line$line\_filt.grd
 	done
 
 fi
@@ -399,14 +387,14 @@ fi
 
 if [ $plotgrid -eq 1 ] ; then
 
-echo "plotting individual CHIRP profiles"
+	echo "plotting individual CHIRP profiles"
  
 	 makecpt -Cgray -T-.8/.8/.01 -Z -I > chirp_gray.cpt
 
 	numlines=`wc -l sentry$dive\_turns.xy | awk '{print $1-1}'`
 	for line in `seq 1 1 $numlines  `; do
 	
-	echo plotting sentry $dive line $line 
+		echo plotting sentry $dive line $line 
 		outfile=images/sentry$dive\_line$line\_filt
  
 		cdpnum=`awk '$1==line {print ($3-$2)+1} ' line=$line linestartsends`
@@ -414,17 +402,17 @@ echo "plotting individual CHIRP profiles"
 		cdp1=`awk '$1==line {print $2}' line=$line linestartsends`
 		cdp2=`awk '$1==line {print $3}' line=$line linestartsends`
 
-# 		grab line length in m calculated earlier
+		# 	grab line length in m calculated earlier
 		xmax=`awk '$1==line {print $8/1000} ' line=$line linestartsends`
 		
-# 		given horizontal scale, calculate plot width in cm
+		# 	 given horizontal scale, calculate plot width in cm
 		
 		width=`echo $horiz_scale $cdpnum | awk '{print $1*$2}' `
 
-# need to know how many samples in each trace to make grid file
-# get sample rate from first jsf/su file, in milliseconds
-#     e.g.  sample rate = 23  microseconds = 0.000023 s
-#     if time window is 0.8 seconds, num samples = 3478
+		# need to know how many samples in each trace to make grid file
+		# get sample rate from first jsf/su file, in milliseconds
+		#     e.g.  sample rate = 23  microseconds = 0.000023 s
+		#     if time window is 0.8 seconds, num samples = 3478
 	
 		cat su_files/sentry$dive\_line1_filt.su | sugethw key=dt | head -1 | tr -d -c 0-9 > sentry$dive\_dt.dat
 		dt=`awk '{print $1}' sentry$dive\_dt.dat `
@@ -434,7 +422,7 @@ echo "plotting individual CHIRP profiles"
 		
 	
 
-# work out depth axis limits based on times t1 and t2 set at the beginning, assuming velocity set at beginnng
+		# work out depth axis limits based on times t1 and t2 set at the beginning, assuming velocity set at beginnng
 		
 		depth1=`echo $t1 | awk '{print ($1/2)*v}' v=$v`
 		depth2=`echo $t2 | awk '{print ($1/2)*v}' v=$v`
@@ -443,7 +431,7 @@ echo "plotting individual CHIRP profiles"
 		rgn3=-R0/$xmax/$t1\/$t2
 		rgn4=-R1/$cdpnum\/$t1\/$t2     
 
-# use lon of start/end of line to figure out whether E>W or W>E
+		# use lon of start/end of line to figure out whether E>W or W>E
 		sense=`awk '$1==line {print $6-$4}' line=$line linestartsends | awk '{ if ($1>=0) 	print "1";  else print "0" }'`
 	 
 		if [ $sense -eq 0 ] ; then
@@ -477,5 +465,8 @@ echo "plotting individual CHIRP profiles"
 
 fi
 
+# tidy up a bit
+
+rm -f junk.grd temp* *.ps sentry$dive\_dt.dat datalist* 
 
      
